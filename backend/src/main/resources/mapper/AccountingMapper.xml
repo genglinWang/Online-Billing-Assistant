@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.edu.sdu.ise.labs.dao.AccountingMapper">
+    <resultMap id="BaseResultMap" type="cn.edu.sdu.ise.labs.model.Accounting">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="accounting_name" property="accountingName" jdbcType="VARCHAR"/>
+        <result column="contact" property="contact" jdbcType="VARCHAR"/>
+        <result column="contact_phone" property="contactPhone" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="INTEGER"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="created_by" property="createdBy" jdbcType="VARCHAR"/>
+        <result column="updated_by" property="updatedBy" jdbcType="VARCHAR"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+        id, accounting_name, contact, contact_phone, description,
+    created_at, updated_at, created_by, updated_by
+    </sql>
+<!--自己写的-->
+    <resultMap id="timeSelectResultMap" type="cn.edu.sdu.ise.labs.model.timeSelect" >
+        <result column="month" property="updatedAt" jdbcType="VARCHAR" />
+        <result column="money" property="description" jdbcType="INTEGER" />
+    </resultMap>
+
+    <resultMap id="wordCloudResultMap" type="cn.edu.sdu.ise.labs.model.WordCloud" >
+        <result column="name" property="accountingName" jdbcType="VARCHAR" />
+        <result column="money" property="description" jdbcType="INTEGER" />
+    </resultMap>
+
+<!--    结束-->
+    <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from accounting
+        where id = #{id,jdbcType=INTEGER}
+    </select>
+
+    <insert id="insert" parameterType="cn.edu.sdu.ise.labs.model.Accounting">
+        insert into accounting (id,
+                                accounting_name,
+                                contact,
+                                contact_phone,
+                                description,
+                                created_at,
+                                created_by,
+                                updated_by
+        )
+        values (#{id,jdbcType=INTEGER},
+                #{accountingName,jdbcType=VARCHAR},
+                #{contact,jdbcType=VARCHAR},
+                #{contactPhone,jdbcType=VARCHAR},
+                #{description,jdbcType=INTEGER},
+                #{createdAt, jdbcType=TIMESTAMP},
+                #{createdBy,jdbcType=VARCHAR},
+                #{updatedBy,jdbcType=VARCHAR}
+               )
+    </insert>
+
+    <update id="updateByPrimaryKey" parameterType="cn.edu.sdu.ise.labs.model.Accounting">
+        update accounting
+        set
+            accounting_name = #{accountingName,jdbcType=VARCHAR},
+            contact = #{contact,jdbcType=VARCHAR},
+            contact_phone = #{contactPhone,jdbcType=VARCHAR},
+            description = #{description,jdbcType=INTEGER},
+            updated_by = #{updatedBy,jdbcType=VARCHAR}
+        where id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <!-- 获取名字个数(分页) -->
+    <select id="count" resultType="integer">
+        select count(*)
+        from accounting
+        <where>
+            <if test="accountingName != null">
+                accounting_name like #{accountingName}
+            </if>
+        </where>
+    </select>
+
+    <!-- 获取部门(分页) -->
+    <select id="list" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from accounting
+        <where>
+            <if test="queryDTO.accountingName != null">
+                accounting_name like #{queryDTO.accountingName}
+            </if>
+            <if test="queryDTO.year != null">
+                and year(updated_at) like #{queryDTO.year}
+            </if>
+            <if test="queryDTO.month != null">
+                and month(updated_at) like #{queryDTO.month}
+            </if>
+            <if test="queryDTO.day != null">
+                and day(updated_at) like #{queryDTO.day}
+            </if>
+            <if test="queryDTO.beginYear != null">
+                and year(updated_at) BETWEEN #{queryDTO.beginYear} AND #{queryDTO.endYear}
+            </if>
+            <if test="queryDTO.beginMonth != null">
+                and month(updated_at) BETWEEN #{queryDTO.beginMonth} AND #{queryDTO.endMonth}
+            </if>
+            <if test="queryDTO.beginDay != null">
+                and day(updated_at) BETWEEN #{queryDTO.beginDay} AND #{queryDTO.endDay}
+            </if>
+        </where>
+        limit #{offset}, #{limit}
+    </select>
+    <!-- 批量删除 -->
+    <update id="deleteByCodes">
+        delete from accounting
+        where id in
+        <foreach item="item" index="index" collection="codeList" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </update>
+
+    <select id="timeSelect" resultMap="timeSelectResultMap">
+        select month(updated_at) AS month, sum(description) AS money
+        from accounting
+        where year(updated_at) = #{timeQueryDTO.year}
+        group by month(updated_at)
+    </select>
+
+    <select id="monthList" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from accounting
+        <where>
+            <if test="queryDTO.month != null">
+                month(updated_at) like #{queryDTO.month}
+            </if>
+        </where>
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="countMonth" resultType="integer">
+        select count(*)
+        from accounting
+        <where>
+            <if test="queryDTO.month != null">
+                month(updated_at) like #{queryDTO.month}
+            </if>
+        </where>
+    </select>
+
+    <select id="wordCloud" resultMap="wordCloudResultMap">
+        select accounting_name AS name, description AS money
+        from accounting
+        <where>
+            <if test="queryDTO.accountingName != null and queryDTO.accountingName != ''">
+                accounting_name like #{queryDTO.accountingName}
+            </if>
+        </where>
+    </select>
+</mapper>
